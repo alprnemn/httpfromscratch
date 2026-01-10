@@ -1,0 +1,11 @@
+### GET request to example server
+POST http://localhost:42069/
+Content-Type: application/json
+
+{
+  "username": "asd"
+}
+
+
+###
+GET http://localhost:42069/
