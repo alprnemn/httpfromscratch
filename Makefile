@@ -1,3 +1,5 @@
+.PHONY: push udpsender udpreceiver
+
 udpsender:
 	@go run ./cmd/udpsender
 
@@ -6,3 +8,13 @@ tcplistener:
 
 udpreceiver:
 	nc -u -l 42069
+
+push:
+ifndef MSG
+	$(error MSG is required. Usage: make push MSG="commit message")
+endif
+	@git add .
+	sleep 1
+	@git commit -m "$(MSG)"
+	sleep 2
+	@git push origin main
