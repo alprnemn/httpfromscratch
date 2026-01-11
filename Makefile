@@ -1,4 +1,4 @@
-.PHONY: push udpsender udpreceiver
+.PHONY: push udpsender udpreceiver tcplistener
 
 udpsender:
 	@go run ./cmd/udpsender
@@ -8,6 +8,13 @@ tcplistener:
 
 udpreceiver:
 	nc -u -l 42069
+
+test request:
+	@go test ./internal/request
+
+get:
+	@curl --request GET -sL \
+	     --url 'http://localhost:42069/coffee'
 
 push:
 ifndef MSG
