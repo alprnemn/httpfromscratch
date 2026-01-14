@@ -1,68 +1,54 @@
-package request
+package main
 
 import (
 	"errors"
 	"fmt"
 	cmn "httpfromscratch/common"
 	"io"
+	"log"
 	"strings"
 )
 
-type Request struct {
-	RequestLine RequestLine
-	Headers     map[string]string
-	Body        []byte
-	State       parserState
+var validMethods = map[string]struct{}{
+	"GET":    {},
+	"POST":   {},
+	"PUT":    {},
+	"DELETE": {},
+	"PATCH":  {},
 }
 
-func NewRequest() *Request {
-	return &Request{
-		State: StateInit,
-	}
-}
+type parserState string
 
-func (r *Request) parse(data []byte) (int, error) {
+const BufferSize = 8
 
-	read := 0
+const (
+	StateInit  parserState = "init"
+	StateDone  parserState = "done"
+	StateError parserState = "error"
+)
 
-outer:
-	for {
-		switch r.State {
-		case StateError:
-			return 0, errors.New("error in request state")
-		case StateInit:
-			rl, n, err := parseRequestLine(data[read:])
+func main() {
 
-			if err != nil {
-				r.State = StateError
-				return 0, err
-			}
-
-			if n == 0 {
-				break outer
-			}
-
-			r.RequestLine = *rl
-			read += n
-			r.State = StateDone
-
-		case StateDone:
-			break outer
-		}
+	reader := &chunkReader{
+		data:            "GET /asd HTTP/1.1\r\nHTPPHEADERASD:ASFASF\r\n",
+		numBytesPerRead: 3,
 	}
 
-	return read, nil
+	req, err := ParseRequestFromReader(reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteReqLines(req)
+
 }
 
-func (r *Request) done() bool {
-	return r.State == StateDone || r.State == StateError
-}
+// asdasda\r\nHTPPHEADERASD:ASFASF\r\n
 
-type RequestLine struct {
-	HttpVersion   string
-	RequestTarget string
-	Method        string
-}
+// 3 asd
+// 6 asd
+// 9 a\r
+// 12 \nH buf = asdasda\r\nH
 
 // ParseRequestFromReader parses entire http request
 func ParseRequestFromReader(reader io.Reader) (*Request, error) {
@@ -81,8 +67,16 @@ func ParseRequestFromReader(reader io.Reader) (*Request, error) {
 			buf = newBuf
 		}
 
-		// reads 3(n) and writes to buf
+		// 3 tane okur ve buf a yazar
 		n, err := reader.Read(buf[bufIndex:])
+
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				request.State = StateDone
+				break
+			}
+			return nil, err
+		}
 
 		bufIndex += n
 
@@ -90,13 +84,13 @@ func ParseRequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		fmt.Println("[readn:]", string(buf[readN:bufIndex]))
-		fmt.Println("buf: ", string(buf))
+		fmt.Println("[readn:]", buf[readN:bufIndex])
 		copy(buf, buf[readN:bufIndex])
-		fmt.Println("buf2: ", string(buf))
 		bufIndex -= readN
+
 	}
+
+	fmt.Println("last buf: ", string(buf))
 	return request, nil
 }
 
@@ -111,7 +105,6 @@ func parseRequestLine(b []byte) (*RequestLine, int, error) {
 
 	line := string(b[:crlfIndex])
 	read := crlfIndex + len([]byte("\r\n"))
-
 	parts := strings.Fields(line)
 
 	if err := validateParts(parts); err != nil {

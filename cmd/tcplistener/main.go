@@ -1,11 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io"
+	rq "httpfromscratch/internal/request"
+	"log"
 	"net"
-	"strings"
 )
 
 func main() {
@@ -31,55 +30,63 @@ func main() {
 
 // handle connection and get lines from the connection
 func handleConnection(conn net.Conn) {
-	lines := getLinesChannel(conn)
-	for line := range lines {
-		fmt.Println(line)
+
+	req, err := rq.ParseRequestFromReader(conn)
+	if err != nil {
+		log.Fatal("error: ", err)
 	}
+
+	fmt.Println("ip adress from conn: ", conn.RemoteAddr())
+	rq.WriteReqLines(req)
 
 	fmt.Println("connection closed")
 }
 
+//lines := getLinesChannel(conn)
+//for line := range lines {
+//	fmt.Println(line)
+//}
 // // this function reads lines from the string channel
-func getLinesChannel(conn net.Conn) <-chan string {
-
-	ch := make(chan string)
-
-	go func() {
-		defer close(ch)
-		defer conn.Close()
-
-		currentLineContents := ""
-
-		for {
-			// create buffer
-			buf := make([]byte, 8)
-
-			// read buffer from connection
-			n, err := conn.Read(buf)
-
-			if err != nil {
-				// if raw is ended throws eof and catch it to add last raw
-				if errors.Is(err, io.EOF) {
-					if currentLineContents != "" {
-						ch <- currentLineContents
-					}
-					return
-				}
-				fmt.Println(err)
-				return
-			}
-
-			// split into parts
-			parts := strings.Split(string(buf[:n]), "\n")
-
-			// send parts to the channel except last one
-			for i := 0; i < len(parts)-1; i++ {
-				ch <- currentLineContents + parts[i]
-				currentLineContents = ""
-			}
-			currentLineContents += parts[len(parts)-1]
-		}
-	}()
-
-	return ch
-}
+//func getLinesChannel(conn net.Conn) <-chan string {
+//
+//	ch := make(chan string)
+//
+//	go func() {
+//		defer close(ch)
+//		defer conn.Close()
+//
+//		currentLineContents := ""
+//
+//		for {
+//			// create buffer
+//			buf := make([]byte, 8)
+//
+//			// read buffer from connection
+//			n, err := conn.Read(buf)
+//
+//			if err != nil {
+//				// if raw is ended throws eof and catch it to add last raw
+//				if errors.Is(err, io.EOF) {
+//					if currentLineContents != "" {
+//						ch <- currentLineContents
+//					}
+//					return
+//				}
+//				fmt.Println(err)
+//				return
+//			}
+//
+//			// split into parts
+//			parts := strings.Split(string(buf[:n]), "\n")
+//
+//			// send parts to the channel except last one
+//			for i := 0; i < len(parts)-1; i++ {
+//				ch <- currentLineContents + parts[i]
+//				currentLineContents = ""
+//			}
+//			currentLineContents += parts[len(parts)-1]
+//		}
+//	}()
+//
+//	return ch
+//}

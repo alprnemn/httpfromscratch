@@ -12,6 +12,9 @@ udpreceiver:
 test request:
 	@go test ./internal/request
 
+simple:
+	@go run ./cmd/simple
+
 get:
 	@curl --request GET -sL \
 	     --url 'http://localhost:42069/coffee'
