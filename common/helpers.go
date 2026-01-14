@@ -4,13 +4,12 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-	"unicode"
 )
 
 // IsAllUpper function checks string to all chars are upper
-func IsAllUpper(s string) bool {
-	for _, r := range s {
-		if unicode.IsLetter(r) && !unicode.IsUpper(r) {
+func IsAllUpperBytes(b []byte) bool {
+	for _, c := range b {
+		if c < 'A' || c > 'Z' {
 			return false
 		}
 	}

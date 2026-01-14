@@ -1,11 +1,11 @@
 package request
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	cmn "httpfromscratch/common"
 	"io"
-	"strings"
 )
 
 type Request struct {
@@ -103,32 +103,34 @@ func ParseRequestFromReader(reader io.Reader) (*Request, error) {
 // parseRequestLine parses request line parts and returns *RequestLine readed n and err
 func parseRequestLine(b []byte) (*RequestLine, int, error) {
 
-	crlfIndex := strings.Index(string(b), "\r\n")
+	crlf := []byte("\r\n")
+
+	crlfIndex := bytes.Index(b, crlf)
 
 	if crlfIndex == -1 {
 		return nil, 0, nil
 	}
 
-	line := string(b[:crlfIndex])
-	read := crlfIndex + len([]byte("\r\n"))
+	line := b[:crlfIndex]
+	read := crlfIndex + len(crlf)
 
-	parts := strings.Fields(line)
+	parts := bytes.Fields(line)
 
 	if err := validateParts(parts); err != nil {
 		return nil, 0, err
 	}
 
 	reqline := &RequestLine{
-		Method:        parts[0],
-		RequestTarget: parts[1],
-		HttpVersion:   parts[2][5:],
+		Method:        string(parts[0]),
+		RequestTarget: string(parts[1]),
+		HttpVersion:   string(parts[2][5:]),
 	}
 
 	return reqline, read, nil
 }
 
 // validateParts validates RequestLine Parts
-func validateParts(parts []string) error {
+func validateParts(parts [][]byte) error {
 	if len(parts) != 3 {
 		return errors.New("request line parts must be 3")
 	}
@@ -149,16 +151,16 @@ func validateParts(parts []string) error {
 }
 
 // validateMethod check method is valid
-func validateMethod(m string) error {
-	if m == "" {
+func validateMethod(m []byte) error {
+	if len(m) == 0 {
 		return cmn.ErrInvalidMethodFormat
 	}
 
-	if !cmn.IsAllUpper(m) {
+	if !cmn.IsAllUpperBytes(m) {
 		return errors.New("method chars must be capitalize")
 	}
 
-	if _, ok := validMethods[m]; !ok {
+	if _, ok := validMethods[string(m)]; !ok {
 		return cmn.ErrMethodNotImplemented
 	}
 
@@ -166,8 +168,8 @@ func validateMethod(m string) error {
 }
 
 // validateTarget check request target is valid
-func validateTarget(t string) error {
-	if t == "" {
+func validateTarget(t []byte) error {
+	if len(t) == 0 {
 		return errors.New("target cannot be empty")
 	}
 
@@ -179,24 +181,25 @@ func validateTarget(t string) error {
 }
 
 // validateHTTPVersion valids version
-func validateHTTPVersion(s string) error {
-	if s == "" {
+func validateHTTPVersion(v []byte) error {
+	if len(v) == 0 {
 		return errors.New("version cannot be empty")
 	}
 
-	versionParts := strings.Split(s, "/")
+	parts := bytes.Split(v, []byte("/"))
 
-	if len(versionParts) != 2 {
+	if len(parts) != 2 {
 		return errors.New("invalid http version format")
 	}
 
-	if versionParts[0] != "HTTP" {
+	if !bytes.Equal(parts[0], []byte("HTTP")) {
 		return errors.New("invalid http version format")
 	}
 
-	if versionParts[1] != "1.1" {
+	if !bytes.Equal(parts[1], []byte("1.1")) {
 		return errors.New("only supported version is 1.1")
 	}
+
 	return nil
 }
 
