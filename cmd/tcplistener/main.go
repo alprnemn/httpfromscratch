@@ -31,7 +31,7 @@ func main() {
 // handle connection and get lines from the connection
 func handleConnection(conn net.Conn) {
 
-	req, err := rq.ParseRequestFromReader(conn)
+	req, err := rq.ParseRequest(conn)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

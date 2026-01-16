@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	cmn "httpfromscratch/common"
+	"httpfromscratch/internal/headers"
 	"io"
 )
 
 type Request struct {
 	RequestLine RequestLine
-	Headers     map[string]string
+	Headers     headers.Headers
 	Body        []byte
 	State       parserState
 }
@@ -19,39 +20,6 @@ func NewRequest() *Request {
 	return &Request{
 		State: StateInit,
 	}
-}
-
-func (r *Request) parse(data []byte) (int, error) {
-
-	read := 0
-
-outer:
-	for {
-		switch r.State {
-		case StateError:
-			return 0, errors.New("error in request state")
-		case StateInit:
-			rl, n, err := parseRequestLine(data[read:])
-
-			if err != nil {
-				r.State = StateError
-				return 0, err
-			}
-
-			if n == 0 {
-				break outer
-			}
-
-			r.RequestLine = *rl
-			read += n
-			r.State = StateDone
-
-		case StateDone:
-			break outer
-		}
-	}
-
-	return read, nil
 }
 
 func (r *Request) done() bool {
@@ -65,7 +33,7 @@ type RequestLine struct {
 }
 
 // ParseRequestFromReader parses entire http request
-func ParseRequestFromReader(reader io.Reader) (*Request, error) {
+func ParseRequest(reader io.Reader) (*Request, error) {
 
 	request := NewRequest()
 
@@ -91,13 +59,62 @@ func ParseRequestFromReader(reader io.Reader) (*Request, error) {
 			return nil, err
 		}
 
-		fmt.Println("[readn:]", string(buf[readN:bufIndex]))
-		fmt.Println("buf: ", string(buf))
 		copy(buf, buf[readN:bufIndex])
-		fmt.Println("buf2: ", string(buf))
+
 		bufIndex -= readN
 	}
 	return request, nil
+}
+
+func (r *Request) parse(data []byte) (int, error) {
+
+	read := 0
+
+outer:
+	for {
+		switch r.State {
+		case StateError:
+			return 0, errors.New("error in request state")
+		case StateInit:
+			rl, n, err := parseRequestLine(data[read:])
+
+			if err != nil {
+				r.State = StateError
+				return 0, err
+			}
+
+			if n == 0 {
+				break outer
+			}
+
+			r.RequestLine = *rl
+			read += n
+			r.State = StateHeaders
+		case StateHeaders:
+
+			r.Headers = headers.NewHeaders()
+
+			n, done, err := r.Headers.ParseHeader(data[read:])
+			if err != nil {
+				r.State = StateError
+				return 0, err
+			}
+
+			if n == 0 {
+				break outer
+			}
+
+			if done {
+				read += n
+				r.State = StateDone
+			}
+
+		case StateDone:
+			break outer
+		}
+	}
+
+	return read, nil
 }
 
 // parseRequestLine parses request line parts and returns *RequestLine readed n and err

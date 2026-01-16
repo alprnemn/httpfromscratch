@@ -13,7 +13,8 @@ type parserState string
 const BufferSize = 1024
 
 const (
-	StateInit  parserState = "init"
-	StateDone  parserState = "done"
-	StateError parserState = "error"
+	StateHeaders parserState = "reqline"
+	StateInit    parserState = "init"
+	StateDone    parserState = "done"
+	StateError   parserState = "error"
 )
