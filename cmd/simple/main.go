@@ -10,7 +10,8 @@ func main() {
 
 	headers := h.NewHeaders()
 
-	data := []byte("Host:   localhost:42069        \r\n      User-Agent:      curl/7.81.0       \r\n    Accept: */*   \r\nContent-Length: 11\r\n\r\nhello world")
+	//data := []byte("Host:   localhost:42069        \r\n      User-Agent:      curl/7.81.0       \r\n    Accept: */*   \r\nContent-Length: 11\r\n\r\nhello world")
+	data := []byte("       Host: loca\rlhost:42069\r\n      User-Agent:      curl/7.81.0        \r\n\r\n")
 
 	_, _, err := headers.ParseHeader(data)
 	if err != nil {

@@ -32,7 +32,7 @@ type RequestLine struct {
 	Method        string
 }
 
-// ParseRequestFromReader parses entire http request
+// ParseRequest parses entire http request
 func ParseRequest(reader io.Reader) (*Request, error) {
 
 	request := NewRequest()
@@ -225,4 +225,12 @@ func WriteReqLines(req *Request) {
 	fmt.Println("req line method: ", req.RequestLine.Method)
 	fmt.Println("req line target: ", req.RequestLine.RequestTarget)
 	fmt.Println("req line http version: ", req.RequestLine.HttpVersion)
+}
+
+func WriteHeaders(req *Request) {
+
+	for k, v := range req.Headers {
+		fmt.Printf("key:%s, value:%s\n", k, v)
+	}
+
 }

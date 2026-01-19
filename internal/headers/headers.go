@@ -27,16 +27,12 @@ func (h Headers) ParseHeader(data []byte) (n int, done bool, err error) {
 
 	headers := bytes.Split(allHeaders, crLf)
 
-	//if err := validateHeaders(headers); err != nil {
-	//	return 0, false, err
-	//}
-
 	for i := 0; i < len(headers); i++ {
-		l, r, err := validateHeader(headers[i])
+		k, v, err := validateHeader(headers[i])
 		if err != nil {
 			return 0, false, err
 		}
-		h[l] = r
+		h[k] = v
 	}
 
 	return read, true, nil
@@ -49,22 +45,84 @@ func validateHeader(header []byte) (string, string, error) {
 
 	parts := bytes.SplitN(header, []byte(":"), 2)
 
-	if bytes.Index(parts[0], []byte(" ")) != -1 {
-		return "", "", fmt.Errorf("key cannot take ' ' space at %s field-name", string(parts[0]))
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid header format (missing colon)")
 	}
 
-	parts[1] = bytes.TrimSpace(parts[1])
+	key := parts[0]
+	value := bytes.TrimSpace(parts[1])
 
-	left := string(parts[0])
-	right := string(parts[1])
+	if !isValidHeaderKey(key) {
+		return "", "", fmt.Errorf("invalid header key: %s", string(key))
+	}
 
-	return left, right, nil
+	if !isValidHeaderValue(value) {
+		return "", "", fmt.Errorf("invalid header value: %s", string(value))
+	}
+
+	key = bytes.ToLower(key)
+
+	return string(key), string(value), nil
 }
 
-//POST /coffee HTTP/1.1\r\n
-//    Host: localhost:42069     \r\n
-//User-Agent: curl/7.81.0\r\n
-//Accept: */*\r\n
-//Content-Length: 11\r\n
-//\r\n
-//hello world
+// isValidHeaderValue checks key is valid
+func isValidHeaderValue(value []byte) bool {
+	for _, b := range value {
+		// CR / LF
+		if b == '\r' || b == '\n' {
+			return false
+		}
+
+		// Control chars
+		if b < 0x20 && b != '\t' {
+			return false
+		}
+
+		// DEL
+		if b == 0x7F {
+			return false
+		}
+	}
+	return true
+}
+
+// isValidHeaderKey checks value is valid
+func isValidHeaderKey(key []byte) bool {
+	if len(key) == 0 {
+		return false
+	}
+
+	for _, b := range key {
+		if !isTChar(b) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isTChar checks byte is valid (A-Z,a-z,0-9,validchars)
+func isTChar(b byte) bool {
+	// A-Z
+	if b >= 'A' && b <= 'Z' {
+		return true
+	}
+
+	// a-z
+	if b >= 'a' && b <= 'z' {
+		return true
+	}
+
+	// 0-9
+	if b >= '0' && b <= '9' {
+		return true
+	}
+
+	switch b {
+	case '!', '#', '$', '%', '&', '\'', '*',
+		'+', '-', '.', '^', '_', '`', '|', '~':
+		return true
+	}
+
+	return false
+}
