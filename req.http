@@ -8,4 +8,8 @@ Content-Type: application/json
 
 
 ###
-GET http://localhost:42069/
+GET http://localhost:42069/products
+Accept: application/json
+Authorization: w4fasdfa4g25g4
+Authorization: w4fasdfg45gw4
+Authorization: w4fasdgf543aw4

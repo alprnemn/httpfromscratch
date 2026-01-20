@@ -34,6 +34,11 @@ func TestHeaders_Parse(t *testing.T) {
 	n, done, err = headers.ParseHeader(data)
 	assert.Equal(t, "loca", headers["host"])
 
+	headers = NewHeaders()
+	data = []byte("       Host: localhost:42069\n      Host:      localhost:55555        \nUser-Agent: Curl\r\n\r\n")
+	n, done, err = headers.ParseHeader(data)
+	assert.Equal(t, "localhost:42069,localhost:55555", headers["host"])
+
 }
 
 //POST /coffee HTTP/1.1\r\nHost: localhost:42069\r\n

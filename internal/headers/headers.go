@@ -32,7 +32,11 @@ func (h Headers) ParseHeader(data []byte) (n int, done bool, err error) {
 		if err != nil {
 			return 0, false, err
 		}
-		h[k] = v
+		if _, ok := h[k]; ok {
+			h[k] = h[k] + "," + v
+		} else {
+			h[k] = v
+		}
 	}
 
 	return read, true, nil
