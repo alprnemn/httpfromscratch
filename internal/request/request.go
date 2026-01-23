@@ -11,14 +11,15 @@ import (
 
 type Request struct {
 	RequestLine RequestLine
-	Headers     headers.Headers
+	Headers     *headers.Headers
 	Body        []byte
 	State       parserState
 }
 
 func NewRequest() *Request {
 	return &Request{
-		State: StateInit,
+		State:   StateInit,
+		Headers: headers.NewHeaders(),
 	}
 }
 
@@ -52,6 +53,14 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 		// reads 3(n) and writes to buf
 		n, err := reader.Read(buf[bufIndex:])
 
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				request.State = StateDone
+				break
+			}
+			return nil, err
+		}
+
 		bufIndex += n
 
 		readN, err := request.parse(buf[:bufIndex])
@@ -63,7 +72,9 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 
 		bufIndex -= readN
 	}
+
 	return request, nil
+
 }
 
 func (r *Request) parse(data []byte) (int, error) {
@@ -72,11 +83,14 @@ func (r *Request) parse(data []byte) (int, error) {
 
 outer:
 	for {
+
+		currentData := data[read:]
+
 		switch r.State {
 		case StateError:
 			return 0, errors.New("error in request state")
 		case StateInit:
-			rl, n, err := parseRequestLine(data[read:])
+			rl, n, err := parseRequestLine(currentData)
 
 			if err != nil {
 				r.State = StateError
@@ -90,11 +104,11 @@ outer:
 			r.RequestLine = *rl
 			read += n
 			r.State = StateHeaders
+			fmt.Println(rl.Method)
+			fmt.Println(rl.RequestTarget)
+			fmt.Println(rl.HttpVersion)
 		case StateHeaders:
-
-			r.Headers = headers.NewHeaders()
-
-			n, done, err := r.Headers.ParseHeader(data[read:])
+			n, done, err := r.Headers.Parse(currentData)
 			if err != nil {
 				r.State = StateError
 				return 0, err
@@ -104,14 +118,18 @@ outer:
 				break outer
 			}
 
+			read += n
+
 			if done {
-				read += n
 				r.State = StateDone
 			}
 
 		case StateDone:
 			break outer
+		default:
+			panic("something went wrongg at the req parse")
 		}
+
 	}
 
 	return read, nil
@@ -197,7 +215,7 @@ func validateTarget(t []byte) error {
 	return nil
 }
 
-// validateHTTPVersion valids version
+// validateHTTPVersion v0alids version
 func validateHTTPVersion(v []byte) error {
 	if len(v) == 0 {
 		return errors.New("version cannot be empty")
@@ -220,17 +238,18 @@ func validateHTTPVersion(v []byte) error {
 	return nil
 }
 
-// Writes request line fields to console
+// Writes request line fields to consol
 func WriteReqLines(req *Request) {
 	fmt.Println("req line method: ", req.RequestLine.Method)
 	fmt.Println("req line target: ", req.RequestLine.RequestTarget)
 	fmt.Println("req line http version: ", req.RequestLine.HttpVersion)
 }
 
-func WriteHeaders(req *Request) {
-
-	for k, v := range req.Headers {
-		fmt.Printf("key:%s, value:%s\n", k, v)
-	}
-
-}
+//
+//func WriteHeaders(req *Request) {
+//
+//	for k, v := range req.Headers. {
+//		fmt.Printf("key:%s, value:%s\n", k, v)
+//	}
+//
+//}

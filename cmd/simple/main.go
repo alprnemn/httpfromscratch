@@ -2,24 +2,51 @@ package main
 
 import (
 	"fmt"
-	h "httpfromscratch/internal/headers"
-	"log"
+	r "httpfromscratch/internal/request"
+	"io"
 )
 
 func main() {
 
-	headers := h.NewHeaders()
+	reader := &chunkReader{
+		data:            "GET /asd HTTP/1.1\r\n   Host: localhost:42069   \r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+		numBytesPerRead: 8,
+	}
 
-	//data := []byte("Host:   localhost:42069        \r\n      User-Agent:      curl/7.81.0       \r\n    Accept: */*   \r\nContent-Length: 11\r\n\r\nhello world")
-	data := []byte("       Host: localhost:42069\r\n      Host:      localhost:55555        \nUser-Agent: Curl\n\n\n\n")
-
-	_, _, err := headers.ParseHeader(data)
+	request, err := r.ParseRequest(reader)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("err: ", err)
+		return
 	}
 
-	for k, v := range headers {
-		fmt.Printf("--%s--,--%s--\n", k, v)
+	r.WriteReqLines(request)
+	fmt.Println("headers: ", request.Headers.Get("Host"))
+	fmt.Println("headers: ", request.Headers.Get("User-Agent"))
+	fmt.Println("headers: ", request.Headers.Get("Accept"))
+
+}
+
+type chunkReader struct {
+	data            string
+	numBytesPerRead int
+	pos             int
+}
+
+// [4, 4, 3 , 6]
+func (cr *chunkReader) Read(p []byte) (n int, err error) {
+	if cr.pos >= len(cr.data) {
+		return 0, io.EOF
 	}
+
+	endIndex := cr.pos + cr.numBytesPerRead
+
+	if endIndex > len(cr.data) {
+		endIndex = len(cr.data)
+	}
+
+	n = copy(p, cr.data[cr.pos:endIndex])
+	cr.pos += n
+
+	return n, nil
 
 }

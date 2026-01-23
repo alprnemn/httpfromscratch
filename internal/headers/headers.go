@@ -3,47 +3,85 @@ package headers
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
-type Headers map[string]string
-
-func NewHeaders() Headers {
-	return Headers{}
+type Headers struct {
+	headers map[string]string
 }
 
-func (h Headers) ParseHeader(data []byte) (n int, done bool, err error) {
-
-	crLf := []byte("\r\n")
-
-	endOfHeaders := []byte("\r\n\r\n")
-
-	endCRLFIndex := bytes.Index(data, endOfHeaders)
-	if endCRLFIndex == -1 {
-		return 0, false, nil
+func NewHeaders() *Headers {
+	return &Headers{
+		headers: map[string]string{},
 	}
+}
 
-	allHeaders := data[:endCRLFIndex]
-	read := endCRLFIndex + len(endOfHeaders)
+func (h *Headers) Get(name string) string {
+	return h.headers[strings.ToLower(name)]
+}
 
-	headers := bytes.Split(allHeaders, crLf)
+func (h *Headers) Set(name, value string) {
+	name = strings.ToLower(name)
+	if _, ok := h.headers[name]; ok {
+		h.headers[name] += "," + value
+		return
+	}
+	h.headers[strings.ToLower(name)] = value
+}
 
-	for i := 0; i < len(headers); i++ {
-		k, v, err := validateHeader(headers[i])
+func (h *Headers) Parse(data []byte) (int, bool, error) {
+	// Host:asdf\r\nAgent
+	crlf := []byte("\r\n")
+	read := 0
+	done := false
+
+	for {
+		crLFidx := bytes.Index(data[read:], crlf)
+		if crLFidx == -1 {
+			break
+		}
+
+		if crLFidx == 0 {
+			done = true
+			read += len(crlf)
+			break
+		}
+
+		name, value, err := parseHeader(data[read:crLFidx])
 		if err != nil {
 			return 0, false, err
 		}
-		if _, ok := h[k]; ok {
-			h[k] = h[k] + "," + v
-		} else {
-			h[k] = v
-		}
+
+		read = crLFidx + len(crlf)
+
+		h.Set(name, value)
+
 	}
 
-	return read, true, nil
+	return read, done, nil
+
+}
+
+func parseHeadersTrimeagen(fieldLine []byte) (string, string, error) {
+
+	parts := bytes.SplitN(fieldLine, []byte(":"), 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("malformed header")
+	}
+
+	name := parts[0]
+	value := bytes.TrimSpace(parts[1])
+
+	if bytes.HasSuffix(name, []byte(" ")) {
+		return "", "", fmt.Errorf("malformed field name")
+	}
+
+	return string(name), string(value), nil
+
 }
 
 // TODO: Validate headers ' ' by RFC make whitespaces appropriate
-func validateHeader(header []byte) (string, string, error) {
+func parseHeader(header []byte) (string, string, error) {
 
 	header = bytes.TrimSpace(header)
 
@@ -64,8 +102,6 @@ func validateHeader(header []byte) (string, string, error) {
 		return "", "", fmt.Errorf("invalid header value: %s", string(value))
 	}
 
-	key = bytes.ToLower(key)
-
 	return string(key), string(value), nil
 }
 
@@ -77,7 +113,12 @@ func isValidHeaderValue(value []byte) bool {
 			return false
 		}
 
-		// Control chars
+		// Space
+		if b == ' ' { // or b == 0x20
+			return false
+		}
+
+		// Control chars (except TAB)
 		if b < 0x20 && b != '\t' {
 			return false
 		}
@@ -130,3 +171,29 @@ func isTChar(b byte) bool {
 
 	return false
 }
+
+//func MyParseHeadersMethod(headers []byte) {
+//	endOfHeaders := []byte("\r\n\r\n")
+//
+//	endCRLFIndex := bytes.Index(data, endOfHeaders)
+//	if endCRLFIndex == -1 {
+//		return 0, false, nil
+//	}
+//
+//	allHeaders := data[:endCRLFIndex]
+//	read := endCRLFIndex + len(endOfHeaders)
+//
+//	headers := bytes.Split(allHeaders, crlf)
+//
+//	for i := 0; i < len(headers); i++ {
+//		k, v, err := validateHeader(headers[i])
+//		if err != nil {
+//			return 0, false, err
+//		}
+//		if _, ok := h[k]; ok {
+//			h[k] = h[k] + "," + v
+//		} else {
+//			h[k] = v
+//		}
+//	}
+//}

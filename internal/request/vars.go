@@ -17,4 +17,5 @@ const (
 	StateInit    parserState = "init"
 	StateDone    parserState = "done"
 	StateError   parserState = "error"
+	StateBody    parserState = "body"
 )

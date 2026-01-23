@@ -16,7 +16,8 @@ test request:
 test headers:
 	@go test ./internal/headers
 
-
+ccd:
+	@go run ./cmd/ccd
 simple:
 	@go run ./cmd/simple
 
@@ -25,6 +26,6 @@ get:
 	     --url 'http://localhost:42069/coffee' \
 	     -H "Accept: application/json" \
   		 -H "Authorization: Bearer your_token_here" \
-  		 -H "Authori zation: Bearer asdfasfdasf"
+  		 -H "Authorization: Bearer asdfasfdasf"
 
 
