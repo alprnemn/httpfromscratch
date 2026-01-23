@@ -37,8 +37,11 @@ func handleConnection(conn net.Conn) {
 	}
 
 	fmt.Println("ip adress from conn: ", conn.RemoteAddr())
-	rq.WriteHeaders(req)
 	rq.WriteReqLines(req)
+
+	req.Headers.ForEach(func(n, v string) {
+		fmt.Println(n, v)
+	})
 
 	fmt.Println("connection closed")
 }

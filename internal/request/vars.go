@@ -10,7 +10,7 @@ var validMethods = map[string]struct{}{
 
 type parserState string
 
-const BufferSize = 1024
+const BufferSize = 8
 
 const (
 	StateHeaders parserState = "reqline"

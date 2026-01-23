@@ -50,7 +50,7 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 			buf = newBuf
 		}
 
-		// reads 3(n) and writes to buf
+		// reads (n) and writes to buf
 		n, err := reader.Read(buf[bufIndex:])
 
 		if err != nil {
@@ -71,6 +71,7 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 		copy(buf, buf[readN:bufIndex])
 
 		bufIndex -= readN
+
 	}
 
 	return request, nil
@@ -78,12 +79,9 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 }
 
 func (r *Request) parse(data []byte) (int, error) {
-
 	read := 0
-
 outer:
 	for {
-
 		currentData := data[read:]
 
 		switch r.State {
@@ -91,7 +89,6 @@ outer:
 			return 0, errors.New("error in request state")
 		case StateInit:
 			rl, n, err := parseRequestLine(currentData)
-
 			if err != nil {
 				r.State = StateError
 				return 0, err
@@ -104,9 +101,7 @@ outer:
 			r.RequestLine = *rl
 			read += n
 			r.State = StateHeaders
-			fmt.Println(rl.Method)
-			fmt.Println(rl.RequestTarget)
-			fmt.Println(rl.HttpVersion)
+
 		case StateHeaders:
 			n, done, err := r.Headers.Parse(currentData)
 			if err != nil {
@@ -118,20 +113,18 @@ outer:
 				break outer
 			}
 
-			read += n
-
 			if done {
 				r.State = StateDone
 			}
+
+			read += n
 
 		case StateDone:
 			break outer
 		default:
 			panic("something went wrongg at the req parse")
 		}
-
 	}
-
 	return read, nil
 }
 
@@ -196,7 +189,7 @@ func validateMethod(m []byte) error {
 	}
 
 	if _, ok := validMethods[string(m)]; !ok {
-		return cmn.ErrMethodNotImplemented
+		return errors.New("method name not implemented")
 	}
 
 	return nil
@@ -244,12 +237,3 @@ func WriteReqLines(req *Request) {
 	fmt.Println("req line target: ", req.RequestLine.RequestTarget)
 	fmt.Println("req line http version: ", req.RequestLine.HttpVersion)
 }
-
-//
-//func WriteHeaders(req *Request) {
-//
-//	for k, v := range req.Headers. {
-//		fmt.Printf("key:%s, value:%s\n", k, v)
-//	}
-//
-//}
