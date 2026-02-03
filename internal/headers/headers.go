@@ -2,6 +2,7 @@ package headers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -16,8 +17,9 @@ func NewHeaders() *Headers {
 	}
 }
 
-func (h *Headers) Get(name string) string {
-	return h.headers[strings.ToLower(name)]
+func (h *Headers) Get(name string) (string, bool) {
+	val, ok := h.headers[strings.ToLower(name)]
+	return val, ok
 }
 
 func (h *Headers) Set(name, value string) {
@@ -42,6 +44,7 @@ func (h *Headers) Parse(data []byte) (int, bool, error) {
 	done := false
 
 	for {
+
 		crLFidx := bytes.Index(data[read:], crlf)
 		if crLFidx == -1 {
 			break
@@ -54,14 +57,13 @@ func (h *Headers) Parse(data []byte) (int, bool, error) {
 		}
 
 		name, value, err := parseHeader(data[read : read+crLFidx])
+
 		if err != nil {
 			return 0, false, err
 		}
-
 		read += crLFidx + len(crlf)
 
 		h.Set(name, value)
-
 	}
 
 	return read, done, nil
@@ -77,6 +79,10 @@ func parseHeader(header []byte) (string, string, error) {
 
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid header format (missing colon)")
+	}
+
+	if len(parts[1]) == 0 {
+		return "", "", errors.New("header got no value")
 	}
 
 	key := parts[0]

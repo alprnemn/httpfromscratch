@@ -9,10 +9,14 @@ import (
 func main() {
 
 	reader := &chunkReader{
-		data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-		numBytesPerRead: 5,
-	}
+		data: "POST /submit HTTP/1.1\r\n" +
+			"Host: localhost:4069\r\n" + // 25
+			"Content-Length:111\r\n" + // 20
+			"\r\n" +
+			"{ name : 'alperen'}",
 
+		numBytesPerRead: 3,
+	}
 	request, err := r.ParseRequest(reader)
 	if err != nil {
 		fmt.Println("err: ", err)
@@ -20,9 +24,11 @@ func main() {
 	}
 
 	r.WriteReqLines(request)
-	fmt.Println(request.Headers.Get("Host"))
-	fmt.Println(request.Headers.Get("User-Agent"))
-	fmt.Println(request.Headers.Get("Accept"))
+	request.Headers.ForEach(func(n, v string) {
+		fmt.Println(n, v)
+	})
+
+	fmt.Println("req body: ", string(request.Body))
 
 }
 

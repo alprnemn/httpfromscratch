@@ -7,12 +7,13 @@ import (
 	cmn "httpfromscratch/common"
 	"httpfromscratch/internal/headers"
 	"io"
+	"strconv"
 )
 
 type Request struct {
 	RequestLine RequestLine
 	Headers     *headers.Headers
-	Body        []byte
+	Body        string
 	State       parserState
 }
 
@@ -20,11 +21,17 @@ func NewRequest() *Request {
 	return &Request{
 		State:   StateInit,
 		Headers: headers.NewHeaders(),
+		Body:    "",
 	}
 }
 
 func (r *Request) done() bool {
 	return r.State == StateDone || r.State == StateError
+}
+
+func (r *Request) hasBody() bool {
+	length := getInt(r.Headers, "content-length", 0)
+	return length > 0
 }
 
 type RequestLine struct {
@@ -42,8 +49,9 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 
 	bufIndex := 0
 
-	for !request.done() {
+	totalBytesParsed := 0
 
+	for !request.done() {
 		if bufIndex == len(buf) {
 			newBuf := make([]byte, len(buf)*2)
 			copy(newBuf, buf)
@@ -68,11 +76,14 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 			return nil, err
 		}
 
+		totalBytesParsed += readN
+
 		copy(buf, buf[readN:bufIndex])
 
 		bufIndex -= readN
-
 	}
+
+	fmt.Println("total bytes parsed: ", totalBytesParsed)
 
 	return request, nil
 
@@ -83,7 +94,9 @@ func (r *Request) parse(data []byte) (int, error) {
 outer:
 	for {
 		currentData := data[read:]
-
+		if len(currentData) == 0 {
+			break outer
+		}
 		switch r.State {
 		case StateError:
 			return 0, errors.New("error in request state")
@@ -101,9 +114,10 @@ outer:
 			r.RequestLine = *rl
 			read += n
 			r.State = StateHeaders
-
 		case StateHeaders:
+
 			n, done, err := r.Headers.Parse(currentData)
+
 			if err != nil {
 				r.State = StateError
 				return 0, err
@@ -113,11 +127,31 @@ outer:
 				break outer
 			}
 
+			read += n
 			if done {
-				r.State = StateDone
+				if r.hasBody() {
+					r.State = StateBody
+				} else {
+					r.State = StateDone
+				}
 			}
 
-			read += n
+		case StateBody:
+			length := getInt(r.Headers, "content-length", 0)
+
+			if length == 0 {
+				panic("chunk not implemented")
+			}
+
+			remaining := min(length-len(r.Body), len(currentData))
+
+			r.Body += string(currentData[:remaining])
+
+			read += remaining
+
+			if len(r.Body) == length {
+				r.State = StateDone
+			}
 
 		case StateDone:
 			break outer
@@ -236,4 +270,19 @@ func WriteReqLines(req *Request) {
 	fmt.Println("req line method: ", req.RequestLine.Method)
 	fmt.Println("req line target: ", req.RequestLine.RequestTarget)
 	fmt.Println("req line http version: ", req.RequestLine.HttpVersion)
+}
+
+func getInt(headers *headers.Headers, name string, defaultValue int) int {
+
+	valueStr, exists := headers.Get(name)
+	if !exists {
+		return defaultValue
+	}
+
+	valueInt, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return valueInt
+
 }

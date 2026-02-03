@@ -8,7 +8,6 @@ type chunkReader struct {
 	pos             int
 }
 
-// [4, 4, 3 , 6]
 func (cr *chunkReader) Read(p []byte) (n int, err error) {
 	if cr.pos >= len(cr.data) {
 		return 0, io.EOF

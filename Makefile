@@ -19,7 +19,7 @@ test headers:
 ccd:
 	@go run ./cmd/ccd
 simple:
-	@go run ./cmd/simple
+	@go run ./internal/simple
 
 get:
 	@curl --request GET -sL \
