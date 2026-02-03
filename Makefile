@@ -2,8 +2,12 @@
 
 # run listeners
 
+run sv:
+	@go run ./cmd/httpserver
+
 udpl:
 	@go run ./cmd/udpsender
+
 tcpl:
 	@go run ./cmd/tcplistener
 
@@ -25,7 +29,6 @@ get:
 	@curl --request GET -sL \
 	     --url 'http://localhost:42069/coffee' \
 	     -H "Accept: application/json" \
-  		 -H "Authorization: Bearer your_token_here" \
-  		 -H "Authorization: Bearer asdfasfdasf"
+  		 -H "Authorization: Bearer <your_token_here>"
 
 
