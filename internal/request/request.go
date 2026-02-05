@@ -83,8 +83,6 @@ func ParseRequest(reader io.Reader) (*Request, error) {
 		bufIndex -= readN
 	}
 
-	fmt.Println("total bytes parsed: ", totalBytesParsed)
-
 	return request, nil
 
 }

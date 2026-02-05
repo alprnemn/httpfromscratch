@@ -2,17 +2,10 @@ package server
 
 import (
 	"fmt"
-	rq "httpfromscratch/internal/request"
-	"log"
+	"io"
 	"net"
-	"strconv"
+	"sync/atomic"
 )
-
-type Server struct {
-	Addr      string
-	ConnState ConnState
-	Listener  net.Listener
-}
 
 type ConnState int
 
@@ -22,60 +15,57 @@ const (
 	StateClosed
 )
 
-func Serve(port int) (*Server, error) {
+type Server struct {
+	Addr     string
+	listener net.Listener
+	closed   atomic.Bool
+}
 
-	sv := &Server{
-		Addr:      ":" + strconv.Itoa(port),
-		ConnState: StateNew,
+func Serve(port uint16) (*Server, error) {
+
+	s := &Server{
+		Addr: fmt.Sprintf(":%d", port),
 	}
 
-	l, err := net.Listen("tcp", sv.Addr)
+	l, err := net.Listen("tcp", s.Addr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	sv.Listener = l
+	s.listener = l
 
-	go sv.listen()
+	go s.listen()
 
-	return sv, nil
+	return s, nil
 }
 
 func (s *Server) Close() error {
-	s.ConnState = StateClosed
-	s.Listener.Close()
-	return nil
+	s.closed.Store(true)
+	return s.listener.Close()
 }
 
 func (s *Server) listen() {
-
-	s.ConnState = StateActive
-
 	for {
-		conn, err := s.Listener.Accept()
+		conn, err := s.listener.Accept()
+		if s.closed.Load() {
+			return
+		}
 		if err != nil {
-			continue
+			return
 		}
 
-		fmt.Println("connection accepted", conn.RemoteAddr())
+		fmt.Println("connection accepted: ", conn.RemoteAddr())
 
 		go s.handle(conn)
 
 	}
+
 }
 
-func (s *Server) handle(conn net.Conn) {
-	req, err := rq.ParseRequest(conn)
-	if err != nil {
-		log.Fatal("error: ", err)
-	}
+func (s *Server) handle(conn io.ReadWriteCloser) {
+	out := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!")
 
-	rq.WriteReqLines(req)
-
-	req.Headers.ForEach(func(n, v string) {
-		fmt.Println(n, v)
-	})
-
-	fmt.Println("connection closed", conn.RemoteAddr())
-
+	conn.Write(out)
+	fmt.Println("conn writed")
+	conn.Close()
 }
