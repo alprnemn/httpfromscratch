@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	r "httpfromscratch/internal/response"
 	"io"
 	"net"
 	"sync/atomic"
@@ -21,6 +22,7 @@ type Server struct {
 	closed   atomic.Bool
 }
 
+// Serve func serves http
 func Serve(port uint16) (*Server, error) {
 
 	s := &Server{
@@ -63,9 +65,9 @@ func (s *Server) listen() {
 }
 
 func (s *Server) handle(conn io.ReadWriteCloser) {
-	out := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!")
 
-	conn.Write(out)
-	fmt.Println("conn writed")
+	if err := r.WriteStatusLine(conn, 400); err != nil {
+		return
+	}
 	conn.Close()
 }

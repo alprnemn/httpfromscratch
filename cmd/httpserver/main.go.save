@@ -9,7 +9,7 @@ import (
 )
 
 const port = 42069
-
+const MakeFileConfig = "make go run"
 func main() {
 	sv, err := server.Serve(port)
 
