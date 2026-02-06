@@ -2,8 +2,9 @@ package server
 
 import (
 	"fmt"
+	"httpfromscratch/internal/request"
 	r "httpfromscratch/internal/response"
-	"io"
+	"log"
 	"net"
 	"sync/atomic"
 )
@@ -20,21 +21,24 @@ type Server struct {
 	Addr     string
 	listener net.Listener
 	closed   atomic.Bool
+	Handler  Handler
 }
 
 // Serve func serves http
-func Serve(port uint16) (*Server, error) {
+func Serve(port uint16, handler Handler) (*Server, error) {
 
-	s := &Server{
-		Addr: fmt.Sprintf(":%d", port),
-	}
+	portStr := fmt.Sprintf(":%d", port)
 
-	l, err := net.Listen("tcp", s.Addr)
+	l, err := net.Listen("tcp", portStr)
 	if err != nil {
 		return nil, err
 	}
 
-	s.listener = l
+	s := &Server{
+		Addr:     portStr,
+		Handler:  handler,
+		listener: l,
+	}
 
 	go s.listen()
 
@@ -64,10 +68,15 @@ func (s *Server) listen() {
 
 }
 
-func (s *Server) handle(conn io.ReadWriteCloser) {
+func (s *Server) handle(conn net.Conn) {
+	defer conn.Close()
 
-	if err := r.WriteStatusLine(conn, 400); err != nil {
-		return
+	req, err := request.ParseRequest(conn)
+	if err != nil {
+		log.Fatal(err)
 	}
-	conn.Close()
+
+	writer := r.NewWriter(conn)
+	s.Handler(writer, req)
+
 }

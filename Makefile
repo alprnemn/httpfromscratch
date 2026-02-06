@@ -14,7 +14,7 @@ tcpl:
 udpreceiver:
 	nc -u -l 42069
 
-# tests
+# tests but raise warning
 test request:
 	@go test ./internal/request
 test headers:
@@ -27,7 +27,7 @@ simple:
 
 get:
 	@curl -v --request GET -sL \
-	     --url 'http://localhost:42069/coffee' \
+	     --url 'http://localhost:42069/health' \
 	     -H "Accept: application/json" \
   		 -H "Authorization: Bearer <your_token_here>"
 

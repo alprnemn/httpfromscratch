@@ -24,6 +24,12 @@ func (h *Headers) Get(name string) (string, bool) {
 
 func (h *Headers) Set(name, value string) {
 	name = strings.ToLower(name)
+
+	if name == "content-length" {
+		h.headers[name] = value
+		return
+	}
+
 	if _, ok := h.headers[name]; ok {
 		h.headers[name] += "," + value
 		return
