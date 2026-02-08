@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 )
 
@@ -26,6 +27,7 @@ func WriteResponse(w *response.Writer, statusCode response.StatusCode, msg strin
 	}
 
 	headers := response.GetDefaultHeaders()
+	headers.Set("Content-length", strconv.Itoa(len(msg)))
 
 	err := w.WriteHeaders(headers)
 	if err != nil {
@@ -36,6 +38,18 @@ func WriteResponse(w *response.Writer, statusCode response.StatusCode, msg strin
 	}
 	return nil
 }
+
+var htmlBody = `
+<html>
+  <head>
+    <title>200 OK</title>
+  </head>
+  <body>
+    <h1>Success</h1>
+    <p>Your request honestly kinda success!! </p>
+  </body>
+</html>
+`
 
 func main() {
 
@@ -55,7 +69,7 @@ func main() {
 			return
 		}
 
-		if err := WriteResponse(w, response.StatusOK, "success"); err != nil {
+		if err := WriteResponse(w, response.StatusOK, "Server is running succesfull!!"); err != nil {
 			log.Fatal(err)
 		}
 		return

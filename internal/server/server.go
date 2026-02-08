@@ -9,14 +9,6 @@ import (
 	"sync/atomic"
 )
 
-type ConnState int
-
-const (
-	StateNew ConnState = iota
-	StateActive
-	StateClosed
-)
-
 type Server struct {
 	Addr     string
 	listener net.Listener

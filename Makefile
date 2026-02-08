@@ -14,7 +14,7 @@ tcpl:
 udpreceiver:
 	nc -u -l 42069
 
-# tests but raise warning
+# tests
 test request:
 	@go test ./internal/request
 test headers:
