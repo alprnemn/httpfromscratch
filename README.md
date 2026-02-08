@@ -23,3 +23,11 @@ To deeply understand how HTTP servers work internally by implementing:
 - Response serialization
 - Header management
 - Concurrency with goroutines
+
+## Running & Testing
+
+Start the server:
+
+```bash
+make run sv
+make get
