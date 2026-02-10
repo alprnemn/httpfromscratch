@@ -3,9 +3,9 @@ package response
 import (
 	"errors"
 	"fmt"
-	h "httpfromscratch/internal/headers"
+	"httpfromscratch/common"
+	headers "httpfromscratch/internal/headers"
 	"net"
-	"strconv"
 )
 
 type StatusCode int
@@ -22,16 +22,59 @@ const (
 
 type Writer struct {
 	conn    net.Conn
-	headers *h.Headers
+	Headers *headers.Headers
 }
 
 func NewWriter(conn net.Conn) *Writer {
 	return &Writer{
 		conn:    conn,
-		headers: GetDefaultHeaders(),
+		Headers: GetDefaultHeaders(),
 	}
 }
 
+// WriteChunkedBody writes a single HTTP/1.1 chunk to the underlying connection.
+// It formats the data according to the chunked transfer encoding specification:
+//
+//	<chunk-size in hex>\r\n
+//	<chunk-data>\r\n
+//
+// If the provided byte slice is empty, the function performs no operation.
+func (w *Writer) WriteChunkedBody(p []byte) error {
+
+	if len(p) == 0 {
+		return nil
+	}
+
+	hexStr, _ := common.ConvertDecToHex(len(p))
+
+	if _, err := w.Write([]byte(hexStr + "\r\n")); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(p); err != nil {
+		return err
+	}
+
+	if _, err := w.Write([]byte("\r\n")); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteChunkedBodyDone writes the terminating chunk that signals the end
+// of a chunked HTTP/1.1 response body. According to the specification,
+// this consists of a zero-length chunk:
+//
+//	0\r\n\r\n
+func (w *Writer) WriteChunkedBodyDone() error {
+	_, err := w.Write([]byte("0\r\n\r\n"))
+	return err
+}
+
+// WriteStatusLine writes the HTTP status line to the connection.
+// The status line includes the protocol version, status code,
+// and reason phrase, and must be written before any headers or body data.
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	switch statusCode {
 	case StatusOK:
@@ -55,22 +98,27 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	return nil
 }
 
-func (w *Writer) WriteHeaders(headers *h.Headers) error {
+// WriteHeaders writes all HTTP response headers to the connection,
+// followed by the mandatory blank line that separates headers from the body.
+func (w *Writer) WriteHeaders(headers *headers.Headers) error {
 	headers.ForEach(func(n, v string) {
 		line := fmt.Sprintf("%s: %s\r\n", n, v)
-		w.conn.Write([]byte(line))
+		_, err := w.conn.Write([]byte(line))
+		if err != nil {
+			return
+		}
 	})
 
 	_, err := w.conn.Write([]byte("\r\n"))
 	return err
 }
 
+// Write writes raw bytes directly to the underlying TCP connection.
+// If the payload is non-empty, it updates the Content-Length header
+// to reflect the size of the written data.
+//
+// This method should not be used when Transfer-Encoding is set to "chunked".
 func (w *Writer) Write(p []byte) (int, error) {
-
-	if len(p) > 0 {
-		strLength := strconv.Itoa(len(p))
-		w.headers.Set("Content-length", strLength)
-	}
 
 	_, err := w.conn.Write(p)
 	if err != nil {
@@ -79,9 +127,11 @@ func (w *Writer) Write(p []byte) (int, error) {
 	return 0, nil
 }
 
-func GetDefaultHeaders() *h.Headers {
-	headers := h.NewHeaders()
-	headers.Set("Connection", "close")
-	headers.Set("Content-Type", "text/plain")
-	return headers
+// GetDefaultHeaders returns a default set of HTTP response headers
+// configured for a chunked response body.
+func GetDefaultHeaders() *headers.Headers {
+	h := headers.NewHeaders()
+	h.SetHeader("Content-Type", "text/plain")
+	h.SetHeader("Transfer-Encoding", "chunked")
+	return h
 }

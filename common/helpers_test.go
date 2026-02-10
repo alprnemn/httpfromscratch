@@ -1,4 +1,4 @@
-package main
+package common
 
 import "testing"
 
@@ -22,7 +22,7 @@ func TestDecToHex(t *testing.T) {
 	}
 
 	for dec, expectedHex := range tests {
-		got, err := convertDecToHex(dec)
+		got, err := ConvertDecToHex(dec)
 		if err != nil {
 			t.Fatalf("unexpected error for %d: %v", dec, err)
 		}

@@ -15,10 +15,12 @@ udpreceiver:
 	nc -u -l 42069
 
 # tests
-test request:
+test-request:
 	@go test ./internal/request
-test headers:
+test-headers:
 	@go test ./internal/headers
+test-helpers:
+	@go test ./common
 
 ccd:
 	@go run ./cmd/ccd
@@ -27,7 +29,7 @@ simple:
 
 get:
 	@curl -v --request GET -sL \
-	     --url 'http://localhost:42069/health' \
+	     --url 'http://localhost:42069/httpbin/stream/100' \
 	     -H "Accept: application/json" \
   		 -H "Authorization: Bearer <your_token_here>"
 

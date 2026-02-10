@@ -2,12 +2,9 @@ package server
 
 import (
 	"httpfromscratch/internal/request"
-	r "httpfromscratch/internal/response"
+	response "httpfromscratch/internal/response"
 )
 
-type HandlerError struct {
-	Code    r.StatusCode
-	Message string
-}
-
-type Handler func(w *r.Writer, req *request.Request)
+// Handler defines the function signature for processing an incoming
+// HTTP request and generating a response using the provided Writer.
+type Handler func(w *response.Writer, req *request.Request)
